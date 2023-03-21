@@ -19,12 +19,13 @@ package controller
 import (
 	"context"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	webappv1 "my.domain/guestbook/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	webappv1 "my.domain/guestbook/api/v1"
 )
 
 // GuestbookReconciler reconciles a Guestbook object
@@ -36,6 +37,7 @@ type GuestbookReconciler struct {
 //+kubebuilder:rbac:groups=webapp.my.domain,resources=guestbooks,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=webapp.my.domain,resources=guestbooks/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=webapp.my.domain,resources=guestbooks/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -47,9 +49,37 @@ type GuestbookReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *GuestbookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	var guestbook webappv1.Guestbook
+	if err := r.Get(ctx, req.NamespacedName, &guestbook); err != nil {
+		log.Error(err, "unable to fetch Guestbook")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	cm := guestbook.Spec.ConfigMapName
+	obj := v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cm,
+			Namespace: guestbook.Namespace,
+		},
+		Data: map[string]string{
+			"key0": "foo",
+			"key1": "bar",
+		},
+	}
+
+	if err := r.Client.Create(ctx, &obj); err != nil {
+		log.Error(err, "unable to Create ConfigMap "+cm)
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
 	return ctrl.Result{}, nil
 }

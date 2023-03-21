@@ -9,6 +9,5 @@ metadata:
     app.kubernetes.io/created-by: operator-playground
   name: guestbook-sample
 spec:
-  # TODO(user): Add fields here
   size: 1
-  configMapName: cm
+  configMapName: pro
