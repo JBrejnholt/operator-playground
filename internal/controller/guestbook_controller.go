@@ -51,7 +51,6 @@ type GuestbookReconciler struct {
 func (r *GuestbookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
 	var guestbook webappv1.Guestbook
 	if err := r.Get(ctx, req.NamespacedName, &guestbook); err != nil {
 		log.Error(err, "unable to fetch Guestbook")
@@ -64,8 +63,9 @@ func (r *GuestbookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	cm := guestbook.Spec.ConfigMapName
 	obj := v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cm,
-			Namespace: guestbook.Namespace,
+			Name:            cm,
+			Namespace:       guestbook.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(&guestbook, webappv1.GroupVersion.WithKind("Guestbook"))},
 		},
 		Data: map[string]string{
 			"key0": "foo",

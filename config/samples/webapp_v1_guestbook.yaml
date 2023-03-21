@@ -10,4 +10,4 @@ metadata:
   name: guestbook-sample
 spec:
   size: 1
-  configMapName: pro
+  configMapName: prob
